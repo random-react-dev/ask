@@ -25,8 +25,10 @@ The command runs until the report is ready. When it exits:
 ## What to tell the user
 
 - Tell them it can take a few minutes.
-- For the very first question on a computer, the command runs a short one-time check; that only matters once.
-- If it reports it could not finish, say so plainly and offer to try again.
+- The server-managed runner prepares the computer according to the current global profile.
+- Preserve the printed task ID. On timeout, use `--resume TASK_ID`; do not submit a duplicate question.
+- If preparation is blocked, use the dashboard's error details and retry controls, then resume the same task.
+- File delivery can remain pending after research finishes. Do not describe queued files as delivered.
 
 ## When to use
 

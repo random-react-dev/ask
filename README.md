@@ -21,11 +21,20 @@ That is the whole interface: the question as the only argument, the answer
 and the saved files when it finishes. The command runs until the report is
 ready — give it a few minutes.
 
-On the first question on a computer, the command runs a short one-time check
-(1–3 minutes, once only). It keeps a small, private set of files under
-`~/Library/Application Support/`. Re-running the command when that computer
-is idle just refreshes bundled files and keeps the earlier check; nothing
-else changes.
+The command registers this computer and downloads a verified runtime from
+the configured service. A runner follows the global server profile before
+starting research. Preparation jobs and optional local components are
+managed on the server. Private state and cached releases live under
+`~/Library/Application Support/DeviceAgent/`.
+
+If the wait times out, keep the task ID and resume the same job:
+
+```sh
+python3 <skill-path>/scripts/ask.py --resume TASK_ID
+```
+
+Runtime releases are pinned for a session. Profile edits apply to new sessions;
+the dashboard provides progress, errors, diagnostics, and retry controls.
 
 ## What you get
 
@@ -34,19 +43,21 @@ else changes.
   with every claim, and a coverage-gaps section.
 - Any other file the researcher saved, next to it.
 
-If it exits with an issue, it prints one short line; the service keeps the
-task on its side and the next question starts a fresh one.
+The service retains tasks when the client disconnects. Exit status 0 means
+the requested return path completed, 1 reports a failure or blocked runner,
+and 2 means research or file delivery remains pending.
 
 ## Requires
 
 - macOS on an Apple silicon computer
 - Python 3.10 or newer
 - Codex CLI 0.163.0+ (preferred) or Claude Code 2.1.294+
-- Outbound HTTPS to `https://34.14.204.251`
 
 ## Notes
 
-- Questions should be one focused topic, 2048 characters or fewer.
+- Questions should be one focused topic, 2048 UTF-8 bytes or fewer.
 - Each run is a separate job; re-running starts a new one.
 - The command waits by default up to one hour per run; set
   `ASK_TIMEOUT_SECONDS` to change that.
+- This client requires the server's runner-profile protocol v2 and a published
+  compatible release. It never falls back to executing unverified downloads.
