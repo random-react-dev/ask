@@ -27,45 +27,20 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Client:
-    def __init__(self, origin, token=None):
+    """Read-only access to published runner releases."""
+    def __init__(self, origin):
         url = urllib.parse.urlsplit(origin)
         if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ('', '/'):
             raise ClientError('Service must be a clean HTTPS origin')
-        self.origin, self.token = origin.rstrip('/'), token
+        self.origin = origin.rstrip('/')
 
-    def download(self, path, stream, size, digest):
-        if not path.startswith('/api/') or not 0 <= size <= 2 * 1024**3:
-            raise ClientError('Invalid file download')
-        headers = {'Authorization': 'Bearer ' + self.token} if self.token else {}
-        request = urllib.request.Request(self.origin + path, headers=headers)
-        count, checksum = 0, hashlib.sha256()
-        try:
-            with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
-                while True:
-                    chunk = response.read(1024 * 1024)
-                    if not chunk: break
-                    count += len(chunk)
-                    if count > size: raise ClientError('Downloaded file exceeds declared size')
-                    checksum.update(chunk); stream.write(chunk)
-        except (OSError, urllib.error.URLError) as exc:
-            raise ClientError('Download interrupted; resume the task to retry: ' + type(exc).__name__) from None
-        if count != size or checksum.hexdigest() != digest:
-            raise ClientError('Downloaded file integrity mismatch')
-
-    def request(self, path, payload=None, raw=False, retry=False):
-        if not path.startswith('/api/') or '?' in path.split('/')[0]:
-            raise ClientError('Invalid service path')
-        headers = {'Accept': 'application/json'}
-        if self.token:
-            headers['Authorization'] = 'Bearer ' + self.token
-        if payload is not None:
-            headers['Content-Type'] = 'application/json'
-        body = json.dumps(payload).encode() if payload is not None else None
-        attempts = 4 if payload is None or retry else 1
-        for attempt in range(attempts):
+    def request(self, path, raw=False):
+        if not path.startswith('/api/public/runner/'):
+            raise ClientError('Only public runner downloads are supported')
+        for attempt in range(4):
             delay = random.uniform(0, min(8, 2 ** attempt))
             try:
-                request = urllib.request.Request(self.origin + path, body, headers)
+                request = urllib.request.Request(self.origin + path, headers={'Accept': 'application/json'})
                 with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
                     content = response.read(MAX_PACKAGE + 1)
                 if len(content) > MAX_PACKAGE:
@@ -75,15 +50,14 @@ class Client:
                 except ValueError:
                     raise ClientError('Service returned invalid JSON') from None
             except urllib.error.HTTPError as exc:
-                if exc.code not in (408, 429, 500, 502, 503, 504) or attempt + 1 == attempts:
-                    raise ClientError('Service request failed (HTTP %s)' % exc.code) from None
-                with_retry = exc.headers.get('Retry-After', '')
-                if with_retry.isdigit():
-                    delay = min(30, int(with_retry))
+                if exc.code not in (408, 429, 500, 502, 503, 504) or attempt == 3:
+                    raise ClientError('Download failed (HTTP %s)' % exc.code) from None
+                if exc.headers.get('Retry-After', '').isdigit():
+                    delay = min(30, int(exc.headers['Retry-After']))
                 exc.close()
             except (OSError, urllib.error.URLError) as exc:
-                if attempt + 1 == attempts:
-                    raise ClientError('Service connection failed: ' + type(exc).__name__) from None
+                if attempt == 3:
+                    raise ClientError('Connection failed: ' + type(exc).__name__) from None
             time.sleep(delay)
 
 
@@ -108,7 +82,7 @@ def materialize(client, descriptor, cache):
         raise ClientError('Invalid artifact digest')
     if not 0 < descriptor.get('size', 0) <= MAX_PACKAGE:
         raise ClientError('Invalid artifact size')
-    if descriptor.get('url') != '/api/device/artifacts/' + digest + '.zip':
+    if descriptor.get('url') != '/api/public/runner/artifacts/' + digest + '.zip':
         raise ClientError('Artifact must come from the configured service')
     cache = Path(cache)
     cache.mkdir(parents=True, exist_ok=True, mode=0o700)
