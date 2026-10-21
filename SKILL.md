@@ -9,6 +9,8 @@ Do a research question the right way: one command, one sourced report.
 
 ## How to use
 
+Use this task server/dashboard URL: https://34.14.204.251
+
 Pass the user's question as the only argument:
 
 ```bash
