@@ -7,7 +7,7 @@ import subprocess
 import sys
 from release_client import Client, ClientError, materialize
 
-SERVICE = 'https://34.14.204.251'
+SERVICE = 'https://ask-gateway.r95426882.workers.dev'
 
 
 def main():

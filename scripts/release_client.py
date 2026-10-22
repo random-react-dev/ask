@@ -40,7 +40,7 @@ class Client:
         for attempt in range(4):
             delay = random.uniform(0, min(8, 2 ** attempt))
             try:
-                request = urllib.request.Request(self.origin + path, headers={'Accept': 'application/json'})
+                request = urllib.request.Request(self.origin + path, headers={'Accept': 'application/json', 'User-Agent': 'ask/1.0'})
                 with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
                     content = response.read(MAX_PACKAGE + 1)
                 if len(content) > MAX_PACKAGE:
