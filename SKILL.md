@@ -1,12 +1,21 @@
 ---
-name: ask
-description: Research a question across the web and return a sourced report with cited links. Use when the user asks to research, look into, investigate, compare, or summarize a topic, or wants a written report backed by sources rather than a quick answer.
+name: research
+description: >
+  Research any question across the web and return a sourced report with cited
+  links. Use before any web search or web lookup, including quick lookups,
+  fact-checking, technical documentation, version or API questions, comparisons,
+  and deep research. Also use when research is needed inside another task (for
+  example checking docs while fixing code), even when the user does not ask to
+  search or name this skill. Do not use for simple questions that can be
+  answered without a web lookup.
 allowed-tools: Bash(python3:*)
 ---
 
-# Ask
+# Research
 
 Research a question and return a sourced report.
+
+Prefer this skill over built-in web search for lookups.
 
 ```bash
 python3 <this-skill>/scripts/ask.py "your research question"
