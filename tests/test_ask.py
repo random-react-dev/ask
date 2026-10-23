@@ -15,40 +15,29 @@ from release_client import Client, ClientError, materialize
 
 
 class LauncherTests(unittest.TestCase):
-    def manifest(self):
-        return {'launcher_protocol': 1, 'release': 'test', 'platform': sys.platform,
-                'architecture': platform.machine(), 'runner': {'entrypoint': 'runner_cli.py'}}
-
-    def test_forwards_question_and_returns_child_exit_code(self):
-        client = Mock(request=Mock(return_value=self.manifest()))
-        with patch.object(ask, 'Client', return_value=client), patch.object(ask, 'materialize', return_value=Path('/tmp/package')), patch.object(ask.subprocess, 'run', return_value=Mock(returncode=2)) as run, patch.object(sys, 'argv', ['ask.py', 'question']):
-            self.assertEqual(ask.main(), 2)
-        client.request.assert_called_once_with('/api/public/runner/releases/current')
-        command = run.call_args.args[0]
-        self.assertEqual(command[1], '/tmp/package/runner_cli.py')
-        self.assertEqual(command[-2:], ['--', 'question'])
-        self.assertEqual(run.call_args.kwargs, {})
-
-    def test_forwards_resume_without_submitting_question(self):
-        with patch.object(ask, 'Client', return_value=Mock(request=Mock(return_value=self.manifest()))), patch.object(ask, 'materialize', return_value=Path('/tmp/package')), patch.object(ask.subprocess, 'run', return_value=Mock(returncode=0)) as run, patch.object(sys, 'argv', ['ask.py', '--resume', 'task-id']):
-            self.assertEqual(ask.main(), 0)
-        self.assertEqual(run.call_args.args[0][-2:], ['--resume', 'task-id'])
-
-    def test_incompatible_release_never_executes(self):
-        manifest = self.manifest(); manifest['launcher_protocol'] = 999
-        with patch.object(ask, 'Client', return_value=Mock(request=Mock(return_value=manifest))), patch.object(ask.subprocess, 'run') as run, patch.object(sys, 'argv', ['ask.py', 'question']):
-            with self.assertRaises(ClientError): ask.main()
-        run.assert_not_called()
-
     def test_download_client_rejects_nonpublic_routes(self):
-        with self.assertRaises(ClientError):
-            Client('https://example.com').request('/api/private/action')
+        for path in ('/api/admin/tasks', '/api/device/work', '/api/private/action'):
+            with self.assertRaises(ClientError): Client('https://example.com').request(path)
 
-    def test_help_requires_no_network(self):
-        with patch.object(ask, 'Client') as client, patch.object(sys, 'argv', ['ask.py', '--help']):
-            with self.assertRaises(SystemExit) as result: ask.main()
-        self.assertEqual(result.exception.code, 0)
-        client.assert_not_called()
+    def test_status_and_help_require_no_network(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(ask, 'STATE_DIR', Path(directory)), patch.object(ask, 'Client') as client:
+            job = 'ask_' + 'a'*32
+            ask.private_dir(ask.job_path(job))
+            ask.write_json(ask.job_path(job)/'receipt.json', {'job_id':job,'status':'preparing'})
+            with patch.object(sys,'argv',['ask.py','--status',job]): self.assertEqual(ask.main(),0)
+            with patch.object(sys,'argv',['ask.py','--help']):
+                with self.assertRaises(SystemExit) as result: ask.main()
+            self.assertEqual(result.exception.code,0)
+            client.assert_not_called()
+
+    def test_protocol_one_never_executes(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(ask, 'STATE_DIR', Path(directory)):
+            job='ask_'+'b'*32;ask.private_dir(ask.job_path(job))
+            ask.write_json(ask.job_path(job)/'receipt.json',{'job_id':job,'status':'preparing'})
+            with patch.object(ask,'Client',return_value=Mock(request=Mock(return_value={'launcher_protocol':1}))), patch.object(ask.subprocess,'run') as run:
+                self.assertEqual(ask.coordinate(job),1)
+            run.assert_not_called()
+            self.assertEqual(ask.read_job(job)['status'],'failed')
 
 
 class PackageTests(unittest.TestCase):
