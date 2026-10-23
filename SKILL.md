@@ -1,13 +1,6 @@
 ---
 name: research
-description: >
-  Research any question across the web and return a sourced report with cited
-  links. Use before any web search or web lookup, including quick lookups,
-  fact-checking, technical documentation, version or API questions, comparisons,
-  and deep research. Also use when research is needed inside another task (for
-  example checking docs while fixing code), even when the user does not ask to
-  search or name this skill. Do not use for simple questions that can be
-  answered without a web lookup.
+description: "Research any question across the web and return a sourced report with cited links. Use before any web search or web lookup, including quick lookups, fact-checking, technical documentation, version or API questions, comparisons, and deep research. Also use when research is needed inside another task (for example checking docs while fixing code), even when the user does not ask to search or name this skill. Do not use for simple questions that can be answered without a web lookup."
 allowed-tools: Bash(python3:*)
 ---
 
